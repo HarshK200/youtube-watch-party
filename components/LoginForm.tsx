@@ -1,6 +1,54 @@
+"use client";
 import { Mail, Lock } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { ChangeEvent, MouseEvent, useState } from "react";
 
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 export default function LoginForm() {
+  const [formData, setFormData] = useState<LoginFormData>({
+    email: "",
+    password: "",
+  });
+  const [responseErr, setResponseErr] = useState<string | null>(null);
+  const router = useRouter();
+  const callbackUrl = "/";
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  async function handleLogin(e: MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
+        callbackUrl: callbackUrl,
+      });
+
+      if (res?.ok) {
+        setResponseErr(null);
+        router.push(callbackUrl);
+      } else {
+        setResponseErr("Invalid email or password");
+      }
+    } catch (err) {
+      alert("Error loging in check console");
+      console.log("Error during login:", err);
+    }
+  }
+
   return (
     <form className="space-y-6">
       <div className="space-y-2">
@@ -15,6 +63,9 @@ export default function LoginForm() {
             className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-5 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary transition-all duration-200 outline-none"
             placeholder="jane@cinema.social"
             type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
           />
         </div>
       </div>
@@ -31,6 +82,9 @@ export default function LoginForm() {
             className="w-full bg-surface-container-highest/50 border-none rounded-lg py-4 pl-12 pr-5 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary transition-all duration-200 outline-none"
             placeholder="••••••••"
             type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
           />
         </div>
       </div>
@@ -40,17 +94,9 @@ export default function LoginForm() {
         <button
           className="cursor-pointer w-full py-4 bg-gradient-to-br from-primary to-primary-dim text-on-primary-fixed font-headline font-bold text-lg rounded-xl shadow-[0px_8px_24px_rgba(235,0,0,0.3)] active:scale-[0.98] transition-all duration-200 uppercase tracking-tight"
           type="submit"
+          onClick={handleLogin}
         >
           Login
-        </button>
-      </div>
-
-      <div className="pt-2">
-        <button
-          className="cursor-pointer w-full py-4 bg-white/5 backdrop-blur-md border border-white/10 text-on-surface font-headline font-bold text-lg rounded-xl hover:bg-white/10 hover:border-primary/50 hover:shadow-[0_0_15px_rgba(255,0,0,0.2)] active:scale-[0.98] transition-all duration-200 uppercase tracking-tight"
-          type="button"
-        >
-          Login as Guest
         </button>
       </div>
     </form>

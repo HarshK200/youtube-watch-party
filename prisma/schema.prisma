@@ -21,20 +21,13 @@ enum Role {
 
 // models
 model User {
-    id           String @id @default(uuid())
-    firstname    String
-    lastname     String
-    email        String @unique
-    password_has String
+    id            String @id @default(uuid())
+    firstname     String
+    lastname      String
+    email         String @unique
+    password_hash String
 
     // TODO: add friends
-    memberships WatchpartyMember[]
-}
-
-model Guest {
-    id   String @id @default(uuid())
-    name String
-
     memberships WatchpartyMember[]
 }
 
@@ -51,11 +44,8 @@ model WatchpartyMember {
     watchParty   WatchParty @relation(fields: [watchPartyId], references: [id], onDelete: Cascade)
     watchPartyId String
 
-    user   User?   @relation(fields: [userId], references: [id])
-    userId String?
-
-    guest   Guest?  @relation(fields: [guestId], references: [id])
-    guestId String?
+    user   User   @relation(fields: [userId], references: [id])
+    userId String
 
     role Role
 }

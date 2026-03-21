@@ -1,7 +1,8 @@
 "use client";
 import axios from "axios";
 import { Mail, Lock } from "lucide-react";
-import { ChangeEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChangeEvent, MouseEvent, useState } from "react";
 
 interface RegisterFormData {
   firstname: string;
@@ -10,6 +11,7 @@ interface RegisterFormData {
   password: string;
 }
 export default function RegisterForm() {
+  const router = useRouter();
   const [formData, setFormData] = useState<RegisterFormData>({
     firstname: "",
     lastname: "",
@@ -26,17 +28,18 @@ export default function RegisterForm() {
     }));
   }
 
-  async function handleRegister(e: any) {
+  async function handleRegister(e: MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
-
-    // TODO: send this form data to /api/register route
-    console.log(formData);
 
     try {
       const res = await axios.post("/api/register", formData);
       console.log(res.data);
-    } catch (err) {
-      console.error(err);
+      alert("Registration successful please login now");
+      router.push("/login");
+    } catch (err: any) {
+      if (err.response.status === 422) alert("Invalid input");
+      if (err.response.status === 409) alert("Email already registered");
+      console.log(err.response);
     }
   }
 
