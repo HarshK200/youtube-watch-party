@@ -1,8 +1,17 @@
-import LoginForm from "@/components/LoginForm";
+"use client";
+import RegisterForm from "@/components/RegisterForm";
 import { ShieldCheck } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const session = useSession();
+  const router = useRouter();
+  if (session.status === "authenticated") {
+    router.push("/");
+  }
+
   return (
     <main className="bg-background cinematic-bg text-on-surface font-body selection:bg-primary selection:text-on-primary-container min-h-screen">
       {/* NOTE: background gradient */}
@@ -24,17 +33,17 @@ export default function LoginPage() {
 
           {/* NOTE: Form Container */}
           <div className="glass-panel rounded-xl p-8 md:p-10 shadow-[0px_24px_48px_rgba(0,0,0,0.8)] border border-white/5">
-            <LoginForm />
+            <RegisterForm />
 
             {/* NOTE: Social Proof / Footer */}
             <div className="mt-8 pt-6 border-t border-white/5 text-center">
               <p className="text-on-surface-variant text-sm mb-4">
-                Don't have an account?
+                Already have an account?
                 <Link
                   className="text-primary font-bold hover:underline ml-1 transition-all"
-                  href="/register"
+                  href="/login"
                 >
-                  Register
+                  Login
                 </Link>
               </p>
             </div>

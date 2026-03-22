@@ -48,4 +48,6 @@ model WatchpartyMember {
     userId String
 
     role Role
+
+    @@unique([watchPartyId, userId])
 }

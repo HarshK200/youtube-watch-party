@@ -40,6 +40,7 @@ export default function LoginForm() {
       if (res?.ok) {
         setResponseErr(null);
         router.push(callbackUrl);
+        return;
       } else {
         setResponseErr("Invalid email or password");
       }

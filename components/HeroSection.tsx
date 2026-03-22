@@ -1,7 +1,41 @@
 "use client";
+import axios from "axios";
 import { CirclePlus } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function HeroSection() {
+  const session = useSession();
+  const router = useRouter();
+
+  async function handleCreateWatchParty() {
+    // NOTE: validate if user is logged in, if not push to login page
+    if (session.status !== "authenticated") {
+      toast.error("Please login to create a watchparty");
+      router.push("/login");
+      return;
+    }
+
+    // TODO: create a watchparty entry in db by sending request to /api/watchparty/create
+    try {
+      const res = await axios.post("/api/watchparty/create", {});
+      console.log(res);
+    } catch (err) {
+      console.log("Error: ", err);
+    }
+
+    // NOTE: finally redirect to watchparty/${slug}
+    toast("Redirecting to watchparty", {
+      style: {
+        borderRadius: "10px",
+        background: "#333",
+        color: "#fff",
+      },
+    });
+    router.push("/watchparty");
+  }
+
   return (
     <section className="relative w-full pt-12 pb-20 px-6 overflow-hidden">
       <div className="max-w-screen-2xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
@@ -21,14 +55,11 @@ export default function HeroSection() {
 
           {/* NOTE: Create New WatchParty section */}
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
-            <button className="cursor-pointer pulse-gradient text-on-primary-fixed px-8 py-4 rounded-xl font-headline font-extrabold text-lg flex items-center justify-center gap-2 active:scale-95 transition-all">
-              <CirclePlus
-                onClick={() =>
-                  alert(
-                    "TODO: yo redirect to watchparty page with the current user as host",
-                  )
-                }
-              />
+            <button
+              className="cursor-pointer pulse-gradient text-on-primary-fixed px-8 py-4 rounded-xl font-headline font-extrabold text-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+              onClick={handleCreateWatchParty}
+            >
+              <CirclePlus />
               Create Watch Party
             </button>
           </div>
