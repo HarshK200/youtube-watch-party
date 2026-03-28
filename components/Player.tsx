@@ -16,8 +16,14 @@ interface PlayerProps {
   VideoUrl: string;
   Role: Role;
   playerRef: RefObject<any>;
+  setCurrentVideoMetadata: React.SetStateAction<any>;
 }
-export default function Player({ VideoUrl, Role, playerRef }: PlayerProps) {
+export default function Player({
+  VideoUrl,
+  Role,
+  playerRef,
+  setCurrentVideoMetadata,
+}: PlayerProps) {
   const [videoLoading, setVideoLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +56,9 @@ export default function Player({ VideoUrl, Role, playerRef }: PlayerProps) {
 
     function onPlayerReady() {
       setVideoLoading(false);
+
+      const videoMetadata = playerRef.current.getVideoData();
+      setCurrentVideoMetadata(videoMetadata);
     }
 
     function onPlayerStateChange() {}

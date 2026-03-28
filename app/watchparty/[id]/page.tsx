@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 
 export default function WatchParty() {
   const playerRef = useRef<any>(null);
+  const [currentVideoMetadata, setCurrentVideoMetadata] = useState<any>(null);
   const { id: partyId } = useParams<{ id: string }>();
   const session = useSession();
   const router = useRouter();
@@ -37,7 +38,12 @@ export default function WatchParty() {
     <main className="flex-1 flex overflow-hidden">
       <section className="flex-1 flex flex-col p-6 space-y-4 overflow-y-auto">
         {/* NOTE: Youtube video player */}
-        <Player VideoUrl={youtubeUrl} Role="HOST" playerRef={playerRef} />
+        <Player
+          VideoUrl={youtubeUrl}
+          Role="HOST"
+          playerRef={playerRef}
+          setCurrentVideoMetadata={setCurrentVideoMetadata}
+        />
 
         {/* NOTE: change video link bar */}
         <div className="glass-panel p-4 rounded-xl border border-white/5 flex items-center gap-4 shadow-xl">
@@ -72,22 +78,21 @@ export default function WatchParty() {
         <div className="flex gap-4">
           <div className="md:col-span-2 glass-panel p-6 rounded-xl space-y-4">
             <div className="flex items-center gap-4">
-              <img
-                alt="Host Avatar"
-                className="w-12 h-12 rounded-full border-2 border-primary"
-                data-alt="Portrait of a young man with glasses"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8vKa8kqjZQ_-D79J4GPIGlsG38suj20DaBi-niiHCOcxM5ZFFQACdRAOvzwzSWmGHpuPsQNsh_C8B75nRMxIMbydDY3OPRYuBh2RHsVSRV0FNb-ze94wAof5qzoDb8SMSB1fA4fhM_EYzB4ZNHo1G90wH08-YormB7tx7jlZ0Qzv2W9OiRQrYNzFIf-ZUD08Dolmnl7W_NVhcTZoUSJdxh7FYD_qvjVuEw9_CpKbvBaIRRrCw8Mv4uuHneba9618S5NwSG2MZdSA"
-              />
               <div>
                 <p className="font-bold text-lg">
-                  Cyberpunk 2077: Phantom Liberty — Official Trailer
+                  {currentVideoMetadata?.title}
                 </p>
-                <p className="text-sm text-on-surface-variant">Host Name</p>
+                <p className="text-sm text-on-surface-variant">
+                  <span className="font-bold text-primary">
+                    Hosted By: {session.data?.user.firstname}{" "}
+                    {session.data?.user.lastname}
+                  </span>
+                </p>
               </div>
             </div>
+
             <p className="text-on-surface-variant text-sm leading-relaxed">
-              Watching the latest trailers for upcoming releases. Feel free to
-              add videos to the queue and react in the chat! No spoilers please.
+              TODO: add watchparty description button
             </p>
           </div>
 
