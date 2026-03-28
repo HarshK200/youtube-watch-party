@@ -17,23 +17,25 @@ export default function HeroSection() {
       return;
     }
 
-    // TODO: create a watchparty entry in db by sending request to /api/watchparty/create
+    // NOTE: creates a watchparty entry in db by sending request to /api/watchparty/create
     try {
       const res = await axios.post("/api/watchparty/create", {});
       console.log(res);
+
+      const { watchPartyId } = res.data;
+
+      // NOTE: finally redirect to watchparty/${slug}
+      toast("Redirecting to watchparty", {
+        style: {
+          borderRadius: "10px",
+          background: "#333",
+          color: "#fff",
+        },
+      });
+      router.push(`/watchparty/${watchPartyId}`);
     } catch (err) {
       console.log("Error: ", err);
     }
-
-    // NOTE: finally redirect to watchparty/${slug}
-    toast("Redirecting to watchparty", {
-      style: {
-        borderRadius: "10px",
-        background: "#333",
-        color: "#fff",
-      },
-    });
-    router.push("/watchparty");
   }
 
   return (

@@ -122,3 +122,12 @@ body {
   opacity: 0.03;
   pointer-events: none;
 }
+
+/* for Watchparty page */
+.video-gradient-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0) 40%
+  );
+}

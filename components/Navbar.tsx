@@ -1,6 +1,6 @@
 "use client";
 import { CircleArrowRight, User } from "lucide-react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -34,19 +34,22 @@ export default function Navbar() {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2 text-on-surface-variant">
             {session.status === "authenticated" ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button className="p-2 rounded-full transition-all duration-200">
                   <User />
                 </button>
-                <span>
-                  {session.data.user.firstname} {session.data.user.lastname}
-                </span>
+                <div className="flex gap-1">
+                  <span>{session.data.user.firstname}</span>
+                  <span className="hidden md:block">
+                    {session.data.user.lastname}
+                  </span>
+                </div>
                 <button
                   className="flex gap-2 cursor-pointer mx-4 px-4 py-2 bg-[#ff8e7d] hover:bg-[#eb0000] hover:text-white font-bold text-black rounded-xl transition-all duration-200"
                   name="logout"
                   onClick={() => signOut()}
                 >
-                  Logout
+                  <span className="hidden md:block">Logout</span>
                   <CircleArrowRight />
                 </button>
               </div>
