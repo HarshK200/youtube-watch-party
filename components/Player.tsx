@@ -1,9 +1,9 @@
 "use client";
 
-import { RefObject, useEffect, useRef, useState } from "react";
-import { Role } from "@/app/generated/prisma/enums";
+import { RefObject, useEffect, useState } from "react";
 import { getYoutubeVideoIdFromUrl } from "@/lib/utils";
 import { ClipLoader } from "react-spinners";
+import { TriangleAlert } from "lucide-react";
 
 declare global {
   interface Window {
@@ -14,13 +14,11 @@ declare global {
 
 interface PlayerProps {
   VideoUrl: string;
-  Role: Role;
   playerRef: RefObject<any>;
   setCurrentVideoMetadata: React.SetStateAction<any>;
 }
 export default function Player({
   VideoUrl,
-  Role,
   playerRef,
   setCurrentVideoMetadata,
 }: PlayerProps) {
@@ -43,7 +41,7 @@ export default function Player({
       playerRef.current = new window.YT.Player("player", {
         videoId: videoId,
         playerVars: {
-          controls: 1, // hide default controls
+          controls: 1,
           rel: 0,
           disablekb: 1,
         },
@@ -61,7 +59,16 @@ export default function Player({
       setCurrentVideoMetadata(videoMetadata);
     }
 
-    function onPlayerStateChange() {}
+    function onPlayerStateChange(event: any) {
+      // NOTE: on video change
+      if (
+        event.data === window.YT.PlayerState.CUED ||
+        event.data === window.YT.PlayerState.PLAYING
+      ) {
+        const data = event.target.getVideoData();
+        setCurrentVideoMetadata(data);
+      }
+    }
   }, [VideoUrl]);
 
   return (
@@ -71,11 +78,17 @@ export default function Player({
         <div className="w-full h-full min-h-[400px]" id="player"></div>
 
         {/* NOTE: loading states */}
-        <ClipLoader
-          loading={videoLoading}
-          color="white"
-          className="absolute top-1/2 -translate-Y-1/2 left-1/2 -translate-x-1/2"
-        />
+        {VideoUrl === "" && !playerRef.current ? (
+          <div className="absolute top-1/2 -translate-Y-1/2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+            <TriangleAlert className="size-20" />
+            <span>Invalid Video link</span>
+          </div>
+        ) : (
+          <ClipLoader
+            loading={videoLoading}
+            className="absolute text-white top-1/2 -translate-Y-1/2 left-1/2 -translate-x-1/2"
+          />
+        )}
       </div>
     </div>
   );

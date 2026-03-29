@@ -1,38 +1,48 @@
 "use client";
 import Player from "@/components/Player";
+import { useSocket } from "@/context/SocketProvider";
 import { getYoutubeVideoIdFromUrl } from "@/lib/utils";
-import { Clapperboard, Edit, Share2, Star } from "lucide-react";
+import { Clapperboard, Edit, Star } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 export default function WatchParty() {
   const playerRef = useRef<any>(null);
   const [currentVideoMetadata, setCurrentVideoMetadata] = useState<any>(null);
-  const { id: partyId } = useParams<{ id: string }>();
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [urlInputValue, setUrlInputValue] = useState("");
+
   const session = useSession();
-  const router = useRouter();
-  const [youtubeUrl, setYoutubeUrl] = useState(
-    "https://www.youtube.com/watch?v=vx5vpG6jEXI",
-  );
+  const { socket } = useSocket();
 
+  // NOTE: binding socket event handlers
   useEffect(() => {
-    if (session.status === "unauthenticated") {
-      toast.error("You are not logged in");
-      router.push("/login");
+    if (!socket) return;
+
+    socket.on("play", ({ time }) => {
+      console.log("Handle video play event");
+    });
+
+    return () => {
+      socket.off("play");
+    };
+  }, [socket]);
+
+  async function handleChangeVideoUrl(e: React.MouseEvent<HTMLButtonElement>) {
+    // NOTE: emmit event "request:change_video" to ws-server *ws-server has db access if user role is HOST then change video and ws-server emmits "change_video" else return an error*
+
+    // HACK: if user is HOST then update youtubeUrl
+    setYoutubeUrl(urlInputValue);
+
+    // NOTE: now cue the new video
+    const newVideoId = getYoutubeVideoIdFromUrl(urlInputValue);
+    if (!newVideoId) {
+      toast.error("No youtube link. Please enter a valid link");
+      return;
     }
-
-    // NOTE: getting partyId from url
-    if (!partyId || !session.data) return;
-    console.log("PartyId: ", partyId);
-    console.log(session.data.user);
-
-    // TODO:
-    // STEP 1: send request to /api/watchparty/partyId
-    // STEP 2: It will validate if watchparty exists and if user is in it? and return UserRole i.e. VIEWER | HOST
-    // STEP 3: Now connect to the websocket server using socket.io and in payload send the userRole *This is very insecure ONLY FOR MVP*
-  }, [partyId, session]);
+    playerRef.current?.cueVideoById(newVideoId);
+  }
 
   return (
     <main className="flex-1 flex overflow-hidden">
@@ -40,7 +50,6 @@ export default function WatchParty() {
         {/* NOTE: Youtube video player */}
         <Player
           VideoUrl={youtubeUrl}
-          Role="HOST"
           playerRef={playerRef}
           setCurrentVideoMetadata={setCurrentVideoMetadata}
         />
@@ -54,20 +63,13 @@ export default function WatchParty() {
             <input
               className="bg-transparent border-none p-0 w-full text-sm text-on-surface-variant focus:ring-0 select-all font-medium outline-none cursor-pointer"
               type="text"
-              value={youtubeUrl}
-              onChange={(e) => setYoutubeUrl(e.target.value)}
+              value={urlInputValue}
+              onChange={(e) => setUrlInputValue(e.target.value)}
             />
           </div>
           <button
             className="pulse-gradient text-on-primary-fixed px-6 py-2.5 rounded-lg font-headline font-bold text-sm active:scale-95 transition-all shadow-lg shadow-primary/20 whitespace-nowrap flex items-center gap-2 cursor-pointer"
-            onClick={() => {
-              const newVideoId = getYoutubeVideoIdFromUrl(youtubeUrl);
-              if (!newVideoId) {
-                toast.error("Invalid youtube link. Please enter a valid link");
-                return;
-              }
-              playerRef.current.cueVideoById(newVideoId);
-            }}
+            onClick={handleChangeVideoUrl}
           >
             <Edit />
             Change Video
@@ -95,11 +97,6 @@ export default function WatchParty() {
               TODO: add watchparty description button
             </p>
           </div>
-
-          <button className="flex cursor-pointer w-fit h-fit items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface text-sm font-medium transition-all active:scale-95">
-            <Share2 />
-            Share
-          </button>
         </div>
       </section>
 
@@ -142,7 +139,7 @@ export default function WatchParty() {
                 <div>
                   <p className="text-sm font-bold text-on-surface">Alex</p>
                   <p className="text-[10px] text-primary uppercase font-black">
-                    Admin
+                    Host
                   </p>
                 </div>
               </div>
@@ -224,7 +221,7 @@ export default function WatchParty() {
             className="w-full py-3 bg-surface-container-high border border-white/10 text-on-surface font-black uppercase tracking-widest text-xs rounded-lg transition-all active:scale-95 hover:bg-surface-bright"
             onClick={() => alert("Work in progress")}
           >
-            Invite Friends
+            Invite
           </button>
           <button
             className="w-full py-3 bg-linear-to-br from-primary-dim to-error-container text-white font-black uppercase tracking-widest text-xs rounded-lg shadow-xl shadow-error-container/20 transition-all active:scale-95"
