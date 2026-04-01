@@ -3,11 +3,13 @@ import axios from "axios";
 import { CirclePlus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import toast from "react-hot-toast";
 
 export default function HeroSection() {
   const session = useSession();
   const router = useRouter();
+  const [partyCode, setPartyCode] = useState("");
 
   async function handleCreateWatchParty() {
     // NOTE: validate if user is logged in, if not push to login page
@@ -35,6 +37,37 @@ export default function HeroSection() {
       router.push(`/watchparty/${watchPartyId}`);
     } catch (err) {
       console.log("Error: ", err);
+    }
+  }
+
+  async function handleJoinParty() {
+    // validate if user is logged in, if not push to login page
+    if (session.status !== "authenticated") {
+      toast.error("Please login to create a watchparty");
+      router.push("/login");
+      return;
+    }
+
+    //  creates a WatchPartyMember entry in db by sending request to /api/watchparty/join
+    try {
+      const res = await axios.post("/api/watchparty/join", {
+        partyId: partyCode,
+      });
+      console.log(res);
+
+      const { watchPartyId, message } = res.data;
+
+      // NOTE: finally redirect to watchparty/${slug}
+      toast("Joined party successfully, Redirecting to watchparty", {
+        style: {
+          borderRadius: "10px",
+          background: "#333",
+          color: "#fff",
+        },
+      });
+      router.push(`/watchparty/${watchPartyId}`);
+    } catch (err: any) {
+      toast.error(err.response.data.message);
     }
   }
 
@@ -69,15 +102,20 @@ export default function HeroSection() {
           {/* NOTE: Join WatchParty section */}
           <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-2xl max-w-md">
             <h3 className="text-sm font-label font-bold uppercase tracking-wider text-on-surface-variant mb-4">
-              Join an existing room
+              Join an existing Party
             </h3>
             <div className="flex gap-2">
               <input
-                className="flex-grow bg-surface-container-highest border-none rounded-lg px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary transition-all"
-                placeholder="Paste party URL or code..."
+                className="grow bg-surface-container-highest border-none rounded-lg px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary transition-all outline-none"
+                placeholder="Paste party code..."
+                value={partyCode}
+                onChange={(e) => setPartyCode(e.target.value)}
                 type="text"
               />
-              <button className="cursor-pointer bg-surface-bright hover:bg-surface-container-highest text-primary font-bold px-6 py-3 rounded-lg transition-colors active:scale-95">
+              <button
+                className="cursor-pointer bg-surface-bright hover:bg-surface-container-highest text-primary font-bold px-6 py-3 rounded-lg transition-colors active:scale-95"
+                onClick={handleJoinParty}
+              >
                 Join
               </button>
             </div>

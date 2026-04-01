@@ -1,47 +1,94 @@
 "use client";
+import PartyMemberCard from "@/components/PartyMemberCard";
 import Player from "@/components/Player";
 import { useSocket } from "@/context/SocketProvider";
 import { getYoutubeVideoIdFromUrl } from "@/lib/utils";
-import { Clapperboard, Edit, Star } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { Clapperboard, Edit } from "lucide-react";
+import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 export default function WatchParty() {
+  const { socket, emitChangeVideo, partyState, setPartyState } = useSocket();
+
   const playerRef = useRef<any>(null);
   const [currentVideoMetadata, setCurrentVideoMetadata] = useState<any>(null);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState(partyState?.videoLink ?? "");
   const [urlInputValue, setUrlInputValue] = useState("");
+  const { id: partyId } = useParams();
 
-  const session = useSession();
-  const { socket } = useSocket();
-
-  // NOTE: binding socket event handlers
   useEffect(() => {
-    if (!socket) return;
+    if (partyState) setYoutubeUrl(partyState.videoLink);
+  }, [partyState]);
 
-    socket.on("play", ({ time }) => {
-      console.log("Handle video play event");
+  // NOTE: socket events handlers
+  useEffect(() => {
+    if (!socket.current) return;
+
+    socket.current?.on("play", ({ time }) => {
+      console.log(`play event by server with time ${time}`);
+
+      playerRef.current?.seekTo(time, true);
+      playerRef.current?.playVideo();
+    });
+
+    socket.current?.on("pause", ({ time }) => {
+      console.log(`pause event by server with time ${time}`);
+
+      playerRef.current?.seekTo(time, true);
+      playerRef.current?.pauseVideo();
+    });
+
+    socket.current?.on("change_video", ({ videoLink }) => {
+      setPartyState((prev) => {
+        if (prev) return { ...prev, videoLink: videoLink };
+      });
+
+      setYoutubeUrl(videoLink);
+      const videoId = getYoutubeVideoIdFromUrl(videoLink);
+      if (!videoId) {
+        toast.error("Invalid video id was set by the host");
+        playerRef.current?.cueVideoById("");
+        return;
+      }
+      playerRef.current?.cueVideoById(videoId);
     });
 
     return () => {
-      socket.off("play");
+      socket.current?.off("play");
+      socket.current?.off("change_video");
     };
-  }, [socket]);
+  }, [socket.current]);
 
   async function handleChangeVideoUrl(e: React.MouseEvent<HTMLButtonElement>) {
     // NOTE: emmit event "request:change_video" to ws-server *ws-server has db access if user role is HOST then change video and ws-server emmits "change_video" else return an error*
+    try {
+      await emitChangeVideo(urlInputValue);
 
-    // HACK: if user is HOST then update youtubeUrl
-    setYoutubeUrl(urlInputValue);
+      setYoutubeUrl(urlInputValue);
 
-    // NOTE: now cue the new video
-    const newVideoId = getYoutubeVideoIdFromUrl(urlInputValue);
-    if (!newVideoId) {
-      toast.error("No youtube link. Please enter a valid link");
-      return;
+      // NOTE: now cue the new video
+      const newVideoId = getYoutubeVideoIdFromUrl(urlInputValue);
+      if (!newVideoId) {
+        toast.error("No youtube link. Please enter a valid link");
+        return;
+      }
+      playerRef.current?.cueVideoById(newVideoId);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err);
     }
-    playerRef.current?.cueVideoById(newVideoId);
+  }
+
+  async function handleInvite() {
+    try {
+      if (partyId) {
+        navigator.clipboard.writeText(partyId as string);
+      }
+      toast("Invite code copied to clipboard");
+    } catch (err) {
+      console.error(`Failed to write to clipboard: ${err}`);
+    }
   }
 
   return (
@@ -86,8 +133,17 @@ export default function WatchParty() {
                 </p>
                 <p className="text-sm text-on-surface-variant">
                   <span className="font-bold text-primary">
-                    Hosted By: {session.data?.user.firstname}{" "}
-                    {session.data?.user.lastname}
+                    Hosted By:{" "}
+                    {
+                      partyState?.members.find(
+                        (member) => member.role === "HOST",
+                      )?.firstname
+                    }{" "}
+                    {
+                      partyState?.members.find(
+                        (member) => member.role === "HOST",
+                      )?.lastname
+                    }
                   </span>
                 </p>
               </div>
@@ -111,7 +167,7 @@ export default function WatchParty() {
               </div>
               <div>
                 <p className="text-xs text-on-surface-variant">
-                  128 Watching Now
+                  {partyState && partyState.members.length} Watching Now
                 </p>
               </div>
             </div>
@@ -124,25 +180,10 @@ export default function WatchParty() {
                 Host
               </h3>
 
-              <div className="flex items-center gap-3 group cursor-pointer active:opacity-80">
-                <div className="relative">
-                  <img
-                    alt="Alex"
-                    className="w-10 h-10 rounded-full border-2 border-primary"
-                    data-alt="Portrait of Alex, the room host"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0b5RWpyVlktSk3i0oxfXajo_CiZ13K1_1S683yH2s9xKJGCtSiRf-DnZnCtRUzez46oBwd6ZVbvAd_681TgudfyZO2P05VhjT4V6d6S4tXLFuT1OOKgK0UxyvFQeAIA3Kd_7iLPyEuAxMfLBQvbN9o8CewjoFrmmP3_JyfBdajk-P9BP8Ziyj5JXVqOFXZHFT38ZRJVt7QNS2ATn6qxz6SaTwTVLVcMPWgIMRqzubc-JqG4mCtV0MSZclC5oGGbduJZLJf0BI004"
-                  />
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-[#131313] flex items-center justify-center">
-                    <Star width={8} className="text-black" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-on-surface">Alex</p>
-                  <p className="text-[10px] text-primary uppercase font-black">
-                    Host
-                  </p>
-                </div>
-              </div>
+              {partyState &&
+                partyState.members
+                  .filter((member) => member.role === "HOST")
+                  .map((m) => <PartyMemberCard member={m} key={m.userId} />)}
             </div>
 
             {/* NOTE: Moderators list */}
@@ -150,76 +191,37 @@ export default function WatchParty() {
               <h3 className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-4 font-bold">
                 Moderators
               </h3>
-              <div className="flex items-center gap-3 group cursor-pointer active:opacity-80">
-                <div className="relative">
-                  <img
-                    alt="Sarah"
-                    className="w-10 h-10 rounded-full border border-tertiary"
-                    data-alt="Portrait of Sarah, the moderator"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8lfi3iQCfBoVC6wlpqW-SKtKquMh0kzRo8Q-OEKKy3tiOuFKPcyhVfrhLHYMR5fr15NC311Hi2-dB0ON40X-XXj1coiJi8OQhkg4ib0XIjg4vcjvaR5QO6AMmyeji5BLkWXW8kYRK__QYBI9oGZ7w8cn69e0vhfz2dVidtqOb_DD0C1n0GKoyFE-aInwO89IwYx_J-SS-Ml8bh2hjX-t1BYK453pOvqgg2iBQTTO_TEizv91Ik_6blcKgXDGgg9Iql3u7WlWZRc0"
-                  />
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-tertiary rounded-full border-2 border-[#131313]"></div>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-on-surface">Sarah</p>
-                  <p className="text-[10px] text-tertiary uppercase font-black">
-                    Moderator
-                  </p>
-                </div>
-              </div>
+              {partyState &&
+                partyState.members
+                  .filter((member) => member.role === "MODERATOR")
+                  .map((m) => <PartyMemberCard member={m} key={m.userId} />)}
             </div>
 
             {/* NOTE: Viewers list */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold">
-                  Viewers (12)
+                  Viewers (
+                  {partyState &&
+                    partyState.members.filter(
+                      (member) => member.role === "VIEWER",
+                    ).length}
+                  )
                 </h3>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 group cursor-pointer active:opacity-80">
-                  <img
-                    alt="User"
-                    className="w-10 h-10 rounded-full opacity-80 hover:opacity-100 transition-opacity"
-                    data-alt="Male user profile"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuB64bdChtWQP6ysoJabdhUCVwZVq-wNm1nL0Ri6U6mU8wte9aBvYgETQEovD2j8enI2bMG5z2E3GOyKUdGX24ssUtRyXZMnuTLB7-j01S3W8gU6IrfnR5DpFDfHhoGbaQDc7MkLu05cS9H78FCmvmNY45_apDeIPoJkH8bKDi97qU4RHW3DnqTnWvmkWj9ddYJBvIooO2067p2yBIYiQ1DFe_pLiOqPTUbbBQJDsRlP4GA7wzVjB85kWvAAQFWt3LVMJr4RRQioWiM"
-                  />
-                  <p className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">
-                    David M.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 group cursor-pointer active:opacity-80">
-                  <img
-                    alt="User"
-                    className="w-10 h-10 rounded-full opacity-80 hover:opacity-100 transition-opacity"
-                    data-alt="Female user profile"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4-XHyFIrsVOIujyrz3Delt1YQzyTEm8eaUumsUnkmWf2rFJun6q9TVZf2ePOd2rhZaq1bSw53w4YaTDoglt_Yr9LQkMQ1fib0Gt0TGyREi0na-pvh1l4UeUDdDXkdXP5Bn9n0ojtZkea3PPmV71oB8hZmuW-DcMy2PJyQSCtpVVzXbTj5rK6qORzxqfsZlVBLgQl2pNgQGIVlw4JxTJehfdwIiljZnSm1yW6DPNN2gjJbn727lEr3dKJFvMQf0DkezAl1PJgW_kY"
-                  />
-                  <p className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">
-                    Elena Rose
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 group cursor-pointer active:opacity-80">
-                  <img
-                    alt="User"
-                    className="w-10 h-10 rounded-full opacity-80 hover:opacity-100 transition-opacity"
-                    data-alt="Professional male user profile"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqpnz0TGp_CdAD7dqSPD3l4ixcGPy6F2lf82uciGjVmztweTNzuA6Mzv6K92CjnRqsz4TuAFX26_NPxy_ypwzxh9NhtwYDX0YCPRFoyPIAT1kOepRDogSx5bLmyTSiiddD5rHVrllNr4YrL66FVJa06CSODIeCHJw7EHFiU74-2DbsztyRZDY1xtWZ2a_CvHDO4NlW1GDbGQDsMq9a100dq5V5HxNSXjrMZpWAIyA0lknkAyLNyiHAqbHbHSamxcw2Gf4V5qY9Kr0"
-                  />
-                  <p className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface">
-                    Marcus T.
-                  </p>
-                </div>
-              </div>
+              {partyState &&
+                partyState.members
+                  .filter((member) => member.role === "VIEWER")
+                  .map((m) => <PartyMemberCard member={m} key={m.userId} />)}
             </div>
           </div>
         </div>
 
         <div className="mt-auto p-6 bg-[#0e0e0e]/50 border-t border-white/5 space-y-3">
           <button
-            className="w-full py-3 bg-surface-container-high border border-white/10 text-on-surface font-black uppercase tracking-widest text-xs rounded-lg transition-all active:scale-95 hover:bg-surface-bright"
-            onClick={() => alert("Work in progress")}
+            className="w-full py-3 bg-surface-container-high border border-white/10 text-on-surface font-black uppercase tracking-widest text-xs rounded-lg transition-all active:scale-95 hover:bg-surface-bright cursor-pointer"
+            onClick={handleInvite}
           >
             Invite
           </button>
