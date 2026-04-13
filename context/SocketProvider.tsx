@@ -23,6 +23,10 @@ export interface PartyState {
   videoLink: string;
   members: PartySessionMember[];
   hostId: string;
+
+  // TODO:
+  // isPlaying: boolean;
+  // recentStateChangeTime: number;
 }
 type SocketResponse<T = any> = {
   ok: boolean;
@@ -35,6 +39,7 @@ interface ISocketContext {
   emitPlay: (time: number) => Promise<void>;
   emitPause: (time: number) => Promise<void>;
   emitChangeVideo: (videoId: string) => Promise<void>;
+  emitAssignRole: (role: Role) => Promise<void>;
 
   partyState: PartyState | undefined;
   setPartyState: React.Dispatch<React.SetStateAction<PartyState | undefined>>;
@@ -58,10 +63,6 @@ export default function SocketProvider({ children }: SocketProviderProps) {
   const socket = useRef<Socket>(null);
   const [partyState, setPartyState] = useState<PartyState>();
 
-  useEffect(() => {
-    console.log(socket);
-  }, [socket]);
-
   const emitPlay: ISocketContext["emitPlay"] = useCallback(
     (time) => {
       console.log("Emitting play", socket);
@@ -75,7 +76,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
         });
       });
     },
-    [socket],
+    [socket.current],
   );
 
   const emitPause: ISocketContext["emitPause"] = useCallback(
@@ -90,7 +91,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
         });
       });
     },
-    [socket],
+    [socket.current],
   );
 
   const emitChangeVideo: ISocketContext["emitChangeVideo"] = useCallback(
@@ -109,7 +110,22 @@ export default function SocketProvider({ children }: SocketProviderProps) {
         );
       });
     },
-    [socket],
+    [socket.current],
+  );
+
+  const emitAssignRole: ISocketContext["emitAssignRole"] = useCallback(
+    (role) => {
+      return new Promise<void>((resolve, reject) => {
+        socket.current?.emit("assign_role", { role }, (res: SocketResponse) => {
+          if (!res.ok) {
+            reject(res.message);
+          } else {
+            resolve();
+          }
+        });
+      });
+    },
+    [socket.current],
   );
 
   useEffect(() => {
@@ -134,13 +150,14 @@ export default function SocketProvider({ children }: SocketProviderProps) {
       },
     });
 
-    socket.current?.on("connect", () => {
-      toast.success("socket connected");
-    });
-
-    socket.current?.on("disconnect", () => {
-      toast.error("socket disconnected");
-    });
+    // DEBUG:
+    //
+    // socket.current?.on("connect", () => {
+    //   toast.success("socket connected");
+    // });
+    // socket.current?.on("disconnect", () => {
+    //   toast.error("socket disconnected");
+    // });
 
     // NOTE: bind socket error handler
     socket.current?.on(
@@ -166,8 +183,10 @@ export default function SocketProvider({ children }: SocketProviderProps) {
       },
     );
 
+    // TODO: 1. rename "party_state" event to "sync_party_state"
+    // 2. add isPlaying and currentTime fields to the partyState as well
     // NOTE: bind socket state sync handler
-    socket.current?.on("party_state", (data) => {
+    socket.current?.on("party_state", (data: PartyState) => {
       console.log("Party state: ", data);
       setPartyState(data);
     });
@@ -185,6 +204,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
         emitChangeVideo,
         emitPlay,
         emitPause,
+        emitAssignRole,
         socket,
         partyState,
         setPartyState,

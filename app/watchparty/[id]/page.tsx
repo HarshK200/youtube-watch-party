@@ -21,20 +21,18 @@ export default function WatchParty() {
     if (partyState) setYoutubeUrl(partyState.videoLink);
   }, [partyState]);
 
-  // NOTE: socket events handlers
+  // socket events handlers (Server -> Client)
   useEffect(() => {
     if (!socket.current) return;
 
     socket.current?.on("play", ({ time }) => {
       console.log(`play event by server with time ${time}`);
-
       playerRef.current?.seekTo(time, true);
       playerRef.current?.playVideo();
     });
 
     socket.current?.on("pause", ({ time }) => {
       console.log(`pause event by server with time ${time}`);
-
       playerRef.current?.seekTo(time, true);
       playerRef.current?.pauseVideo();
     });
@@ -43,7 +41,6 @@ export default function WatchParty() {
       setPartyState((prev) => {
         if (prev) return { ...prev, videoLink: videoLink };
       });
-
       setYoutubeUrl(videoLink);
       const videoId = getYoutubeVideoIdFromUrl(videoLink);
       if (!videoId) {
@@ -56,10 +53,12 @@ export default function WatchParty() {
 
     return () => {
       socket.current?.off("play");
+      socket.current?.off("pause");
       socket.current?.off("change_video");
     };
   }, [socket.current]);
 
+  // socket event emitter (Client -> Server)
   async function handleChangeVideoUrl(e: React.MouseEvent<HTMLButtonElement>) {
     // NOTE: emmit event "request:change_video" to ws-server *ws-server has db access if user role is HOST then change video and ws-server emmits "change_video" else return an error*
     try {
@@ -179,11 +178,12 @@ export default function WatchParty() {
               <h3 className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-4 font-bold">
                 Host
               </h3>
-
               {partyState &&
                 partyState.members
                   .filter((member) => member.role === "HOST")
-                  .map((m) => <PartyMemberCard member={m} key={m.userId} />)}
+                  .map((m) => (
+                    <PartyMemberCard member={m} key={m.userId} />
+                  ))}{" "}
             </div>
 
             {/* NOTE: Moderators list */}
@@ -237,6 +237,7 @@ export default function WatchParty() {
           </button>
         </div>
       </aside>
+
     </main>
   );
 }

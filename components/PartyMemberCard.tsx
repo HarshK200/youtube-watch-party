@@ -1,11 +1,24 @@
-import { PartySessionMember } from "@/context/SocketProvider";
-import { Star, User } from "lucide-react";
+"use client";
+import { PartySessionMember, useSocket } from "@/context/SocketProvider";
+import { ArrowBigUp, Star, User } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export default function PartyMemberCard({
   member,
 }: {
   member: PartySessionMember;
 }) {
+  const { partyState } = useSocket();
+  const session = useSession();
+
+  function handlePromoteToModerator() {
+    const role = partyState?.members.find(
+      (m) => m.userId === session.data?.user.id,
+    )?.role;
+
+    if (!role) return;
+  }
+
   return (
     <div className="flex items-center gap-3 group cursor-pointer active:opacity-80">
       <div className="relative">
@@ -29,6 +42,13 @@ export default function PartyMemberCard({
             {member.role}
           </p>
         )}
+      </div>
+      <div
+        title="Promote to moderator"
+        className="fixed right-10 hover:text-primary"
+        onClick={handlePromoteToModerator}
+      >
+        <ArrowBigUp />
       </div>
     </div>
   );
